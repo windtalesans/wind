@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Xem các vị trí đã đánh dấu</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f4f7fc;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background-color: #4CAF50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+
+    header button {
+      padding: 10px 16px;
+      background-color: #ffffff;
+      color: #4CAF50;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    header button:hover {
+      background-color: #e6e6e6;
+    }
+
+    h3 {
+      color: #333;
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    #map {
+      height: 500px;
+      width: 80%;
+      margin-top: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    table {
+      width: 80%;
+      margin-top: 20px;
+      border-collapse: collapse;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    td {
+      background-color: #ffffff;
+    }
+
+    button.view-btn {
+      background-color: #007bff;
+      color: white;
+      padding: 5px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-size: 14px;
+      margin-right: 6px;
+    }
+
+    button.view-btn:hover {
+      background-color: #0056b3;
+    }
+
+    button.delete-btn {
+      background-color: #dc3545;
+      color: white;
+      padding: 5px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-size: 14px;
+    }
+
+    button.delete-btn:hover {
+      background-color: #b02a37;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    } 
+  </style>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCM1Gibhr1y7x-YWgdzzAbN0mlGnROx2pc",
+      authDomain: "maptest-3cefd.firebaseapp.com",
+      databaseURL: "https://maptest-3cefd-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "maptest-3cefd",
+      storageBucket: "maptest-3cefd.appspot.com",
+      messagingSenderId: "841069533439",
+      appId: "1:841069533439:web:28737f0f9784a1b027d4ca",
+      measurementId: "G-T26Z6GD1VF"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+  </script>
+</head>
+<body>
+
+<header>
+  <h1>Green Eye</h1>
+  <button onclick="window.location.href='main.html'">← Quay lại trang chính</button>
+</header>
+
+<div class="container">
+  <h3>Danh sách vị trí đã đánh dấu:</h3>
+
+  <div id="map"></div>
+
+  <table id="markerTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Tọa độ</th>
+        <th>Hành động</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  let map = L.map('map').setView([21.0285, 105.8542], 13);
+  let markers = {};
+
+  // Icon xanh cho marker đã dọn
+  const greenIcon = new L.Icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/148/148767.png',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30]
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  function addMarker(id, lat, lng, cleaned = false) {
+    let marker;
+    if (cleaned) {
+      marker = L.marker([lat, lng], { icon: greenIcon });
+    } else {
+      marker = L.marker([lat, lng]);
+    }
+
+    marker.addTo(map)
+      .bindPopup("Vị trí: " + lat.toFixed(5) + ", " + lng.toFixed(5));
+
+    markers[id] = marker;
+
+    const table = document.getElementById('markerTable').getElementsByTagName('tbody')[0];
+    const row = table.insertRow();
+    row.setAttribute('data-id', id);
+
+    row.innerHTML = `
+      <td>${table.rows.length}</td>
+      <td>${lat.toFixed(5)}, ${lng.toFixed(5)}</td>
+      <td>
+        <button class="view-btn" onclick="viewMarker('${id}')">Xem</button>
+        <button class="delete-btn" onclick="deleteMarker('${id}')">Xoá</button>
+        ${!cleaned
+          ? `<button class="view-btn" onclick="markAsCleaned('${id}')">Hoàn thành</button>`
+          : `<span style="color: green; font-weight: bold;">Đã dọn</span>`}
+      </td>
+    `;
+  }
+
+  function viewMarker(id) {
+    const marker = markers[id];
+    if (marker) {
+      map.setView(marker.getLatLng(), 15);
+      marker.openPopup();
+    }
+  }
+
+  function deleteMarker(id) {
+    if (confirm("Bạn có chắc chắn muốn xoá marker này không?")) {
+      if (markers[id]) {
+        map.removeLayer(markers[id]);
+        delete markers[id];
+      }
+
+      database.ref('markers/' + id).remove();
+
+      const row = document.querySelector(`tr[data-id="${id}"]`);
+      if (row) row.remove();
+
+      const table = document.getElementById('markerTable').getElementsByTagName('tbody')[0];
+      Array.from(table.rows).forEach((row, index) => {
+        row.cells[0].innerText = index + 1;
+      });
+    }
+  }
+
+  function markAsCleaned(id) {
+    database.ref('markers/' + id).update({ cleaned: true })
+      .then(() => {
+        location.reload(); // Refresh để cập nhật UI
+      })
+      .catch(err => {
+        alert("Lỗi khi cập nhật trạng thái: " + err.message);
+      });
+  }
+
+  // Lấy dữ liệu từ Firebase và hiển thị
+  database.ref('markers').once('value')
+    .then(snapshot => {
+      snapshot.forEach(childSnapshot => {
+        const id = childSnapshot.key;
+        const data = childSnapshot.val();
+        addMarker(id, data.lat, data.lng, data.cleaned || false);
+      });
+    })
+    .catch(error => {
+      console.error("Lỗi khi tải dữ liệu từ Firebase:", error);
+    });
+</script>
+
+</body>
+</html>

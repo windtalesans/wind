@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Đánh dấu và xoá marker</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f4f7fc;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    header {
+      width: 100%;
+      background-color: #4CAF50;
+      padding: 20px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    #map {
+      height: 500px;
+      width: 80%;
+      margin-top: 20px;
+      border-radius: 8px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 10px;
+      width: 250px;
+      margin-right: 12px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    table {
+      width: 80%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    td {
+      background-color: #ffffff;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Modal */
+    #loginModal {
+      display: none;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .modal-content input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .modal-content .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .modal-content h2 {
+      text-align: center;
+      color: #4CAF50;
+    }
+
+  </style>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCM1Gibhr1y7x-YWgdzzAbN0mlGnROx2pc",
+      authDomain: "maptest-3cefd.firebaseapp.com",
+      databaseURL: "https://maptest-3cefd-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "maptest-3cefd",
+      storageBucket: "maptest-3cefd.firebasestorage.app",
+      messagingSenderId: "841069533439",
+      appId: "1:841069533439:web:28737f0f9784a1b027d4ca",
+      measurementId: "G-T26Z6GD1VF"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+  </script>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Green Eye</h1>
+  </div>
+  <button onclick="showLoginModal()">Đăng nhập Nhân viên</button>
+</header>
+
+<div class="container">
+  <h3>Nhập tọa độ (lat, lng) để đánh dấu vị trí</h3>
+  <div class="controls">
+    <input type="text" id="coordInput" placeholder="VD: 20.856554, 106.676188">
+    <button onclick="addMarkerFromString()">Đánh dấu</button>
+    <button onclick="getCurrentLocation()">Lấy vị trí hiện tại</button>
+  </div>    
+  <div id="map"></div>
+
+  <h4>Danh sách vị trí đã đánh dấu:</h4>
+  <table id="markerTable">
+    <thead>
+      <tr><th>#</th><th>Tọa độ</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- Modal đăng nhập -->
+<div id="loginModal" class="modal">
+  <div class="modal-content">
+    <h2>Đăng nhập Nhân viên</h2>
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Mật khẩu" />
+    <div class="actions">
+      <button onclick="hideLoginModal()" style="background:#ccc;">Hủy</button>
+      <button onclick="loginEmployee()" style="background:#4CAF50;color:white;">Đăng nhập</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  const loginModal = document.getElementById("loginModal");
+
+  function showLoginModal() {
+    loginModal.style.display = "flex";
+  }
+
+  function hideLoginModal() {
+    loginModal.style.display = "none";
+  }
+
+  function loginEmployee() {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+
+    firebase.auth().signInWithEmailAndPassword(email, password)
+      .then(() => {
+        window.location.href = "show.html";
+      })
+      .catch(error => {
+        alert("Đăng nhập thất bại: " + error.message);
+      });
+  }
+
+  let map = L.map('map').setView([21.0285, 105.8542], 13);
+  let markers = {};
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  function addMarkerFromString() {
+    const input = document.getElementById('coordInput').value.trim();
+    const parts = input.split(',');
+
+    if (parts.length !== 2) {
+      alert('Vui lòng nhập theo định dạng: lat, lng');
+      return;
+    }
+
+    const lat = parseFloat(parts[0]);
+    const lng = parseFloat(parts[1]);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      alert('Tọa độ không hợp lệ!');
+      return;
+    }
+
+    const newMarkerRef = database.ref('markers').push();
+    newMarkerRef.set({ lat, lng });
+
+    document.getElementById('coordInput').value = '';
+  }
+
+  function renderMarker(id, lat, lng) {
+    const marker = L.marker([lat, lng]).addTo(map)
+      .bindPopup("Vị trí: " + lat.toFixed(5) + ", " + lng.toFixed(5));
+    markers[id] = marker;
+
+    map.setView([lat, lng], 15);
+
+    const table = document.querySelector("#markerTable tbody");
+    const row = table.insertRow();
+    row.setAttribute('data-id', id);
+    row.innerHTML = `
+      <td>${table.rows.length}</td>
+      <td>${lat.toFixed(5)}, ${lng.toFixed(5)}</td>
+    `;
+  }
+
+  function removeMarkerLocally(id) {
+    if (markers[id]) {
+      map.removeLayer(markers[id]);
+      delete markers[id];
+    }
+
+    const row = document.querySelector(`#markerTable tbody tr[data-id="${id}"]`);
+    if (row) row.remove();
+
+    const table = document.querySelector("#markerTable tbody");
+    Array.from(table.rows).forEach((row, index) => {
+      row.cells[0].innerText = index + 1;
+    });
+  }
+
+  database.ref('markers').on('child_added', snapshot => {
+    const id = snapshot.key;
+    const { lat, lng } = snapshot.val();
+    if (!markers[id]) {
+      renderMarker(id, lat, lng);
+    }
+  });
+
+  database.ref('markers').on('child_removed', snapshot => {
+    const id = snapshot.key;
+    removeMarkerLocally(id);
+  });
+  function getCurrentLocation() {
+  if (!navigator.geolocation) {
+    alert("Trình duyệt của bạn không hỗ trợ định vị.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      // Đẩy lên Firebase
+      const newMarkerRef = database.ref('markers').push();
+      newMarkerRef.set({ lat, lng });
+
+      // Tùy chọn: focus vào vị trí đó luôn
+      map.setView([lat, lng], 15);
+    },
+    (error) => {
+      alert("Không thể lấy vị trí: " + error.message);
+    }
+  );
+}
+
+</script>
+
+</body>
+</html>

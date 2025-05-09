@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Thêm Nhân Viên</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+    // Cấu hình Firebase của bạn
+    const firebaseConfig = {
+      apiKey: "AIzaSyCM1Gibhr1y7x-YWgdzzAbN0mlGnROx2pc",
+      authDomain: "maptest-3cefd.firebaseapp.com",
+      databaseURL: "https://maptest-3cefd-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "maptest-3cefd",
+      storageBucket: "maptest-3cefd.firebasestorage.app",
+      messagingSenderId: "841069533439",
+      appId: "1:841069533439:web:28737f0f9784a1b027d4ca",
+      measurementId: "G-T26Z6GD1VF"
+    };
+
+    // Khởi tạo Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    async function addEmployee(event) {
+      event.preventDefault();
+
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "employees", user.uid), {
+          uid: user.uid,
+          name,
+          email,
+          created_at: new Date().toISOString()
+        });
+
+        alert("✅ Thêm nhân viên thành công!");
+        document.getElementById("employeeForm").reset();
+      } catch (error) {
+        alert("❌ Lỗi: " + error.message);
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("employeeForm").addEventListener("submit", addEmployee);
+    });
+  </script>
+</head>
+<body class="bg-gray-50 p-6">
+  <div class="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-bold mb-4 text-center text-teal-600">Thêm Tài Khoản Nhân Viên</h2>
+    <form id="employeeForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Họ tên</label>
+        <input id="name" type="text" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Email</label>
+        <input id="email" type="email" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Mật khẩu</label>
+        <input id="password" type="password" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"/>
+      </div>
+      <button type="submit" class="w-full bg-teal-600 text-white py-2 rounded-lg hover:bg-teal-700">Thêm</button>
+    </form>
+  </div>
+</body>
+</html>
